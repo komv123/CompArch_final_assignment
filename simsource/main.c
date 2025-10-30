@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-
-
 uint32_t x[32]; // Registers
-uint32_t PC;
+uint32_t PC; // TODO: Implementing PC
 
 void dump_registers(){
     for (short i = 0; i < 32; i++){
@@ -24,11 +22,61 @@ void r_type_executioner(uint32_t instr){
 }
 void i_type_executioner(uint32_t instr){
     uint8_t func3;
-    uint16_t imm;
+    int32_t imm;
     uint8_t rd, rs1;
     uint8_t opcode;
 
-    opcode = instr & 0x0000007F;
+    /* Disassembly */
+    opcode  = instr & 0x0000007F;
+    rd      = (instr >> 7) & 0x0000001F;
+    func3   = (instr >> 12) & 0x00000007;
+    rs1     = (instr >> 15) & 0x0000001F;
+    imm     = (instr >> 20) & 0x00000FFF;
+
+    /* imm conversion from 12 bit to 32 bit */
+    if (imm & 0x800) {imm = 0xFFFFF000 | imm;}
+
+    printf("Instr: %x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, imm: %x", 
+        instr, opcode, rd, func3, rs1, imm);
+
+    /* Execution */
+    switch (opcode)
+    {
+    case 0x13: // Immediate operations
+        switch (func3)
+        {
+        case 0x0: // ADD Immediate
+            x[rd] = x[rs1] + imm;
+            break;
+        
+        default:
+            printf("\nError in i-type. Exiting... \n\n");
+            dump_registers();
+            exit(EXIT_FAILURE);
+            break;
+        }
+        break;
+    case 0x03:
+
+        break;
+
+    case 0x73: // Enviroment operations
+        if (!imm) { // ecall
+            printf("\nEnvironment call registered.\nDumping registers and exiting... \n\n");
+            dump_registers();
+            exit(EXIT_SUCCESS);
+        } else {
+            // TODO: ebreak
+        }
+        
+        break;
+
+    default:
+        printf("\nError in i-type. Exiting... \n\n");
+        dump_registers();
+        exit(EXIT_FAILURE);
+        break;
+    }
 }
 void s_type_executioner(uint32_t instr){
     uint8_t func3;
@@ -57,9 +105,9 @@ void u_type_executioner(uint32_t instr){
     rd = (instr >> 7) & 0x0000001F;
     imm = (instr >> 12) & 0x000FFFFF;
 
-    printf("Instr: %x, Opcode: %x, rd: %d, imm: %x\n", instr, opcode, rd, imm);
+    printf("Instr: %x, Opcode: %x, rd: %d, imm: %x", instr, opcode, rd, imm);
 
-
+    /* Execution */
     switch (opcode)
     {
     case 0x37: // Load upper Imm
@@ -71,7 +119,7 @@ void u_type_executioner(uint32_t instr){
         break;
 
     default:
-        printf("Error in U-type. Exiting... \n\n");
+        printf("\nError in U-type. Exiting... \n\n");
         dump_registers();
         exit(EXIT_FAILURE);
         break;
@@ -86,7 +134,7 @@ void j_type_executioner(uint32_t instr){
 /* Disassembler */
 void instruction_disassembler(uint32_t instr){
     uint8_t opcode = instr & 0x0000007F;
-    printf("%x\n", opcode);
+    printf("%x | ", opcode);
 
     /* Deciding which instruction format to use for disassembly */
     switch (instr & 0x0000007F)
@@ -148,7 +196,7 @@ int main(){
     for (size_t i = 0; i < bytes_read; i++) {
         instr = (instr >> 8) + (bin[i] << 24);  // Rearranging the bytes from LSB to MSB
         if ((i + 1) % 4 == 0) {
-            printf("%08x ", instr); 
+            printf("\n%08x ", instr); 
             // Execute instruction
             instruction_disassembler(instr);
         }
