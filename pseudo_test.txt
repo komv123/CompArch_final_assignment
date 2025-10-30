@@ -32,13 +32,53 @@ I_type(Opcode, 25_bits) {
     }
 }
 
-funct3(Opcode, 20_bits) {
-    rs1(Opcode, first_3_bits, other_17_bits)
+S_type(Opcode, 25_bits) {
+    funct3(Opcode, 20_bits, first_5_bits)
 }
 
-rs1(Opcode, funct3, 17_bits) {
+B_type(Opcode, 25_bits) {
+    funct3(Opcode, 20_bits, first_5_bits)
+}
+
+U_type(Opcode, 25_bits) {
+    Switch first_5_bits {
+        case 00000: pass
+        case 00001: x1 = U_funct(Opcode, other_20_bits)
+        case 00010: x2 = U_funct(Opcode, other_20_bits)
+        case 00011: x3 = U_funct(Opcode, other_20_bits)
+        ...
+        case 11111: x31 = U_funct(Opcode, other_20_bits)
+        case _: error
+    }
+}
+
+J_type(Opcode, 25_bits) {
+    Switch first_5_bits {
+        case 00000: pass
+        case 00001: x1 = jal(other_20_bits)
+        case 00010: x2 = jal(other_20_bits)
+        case 00011: x3 = jal(other_20_bits)
+        ...
+        case 11111: x31 = jal(other_20_bits)
+        case _: error
+    }
+}
+
+U_funct(Opcode, 20_bits) {
     Switch Opcode {
-        case 0110011 | 0100011 | 1100011: rs2(Opcode, funct3, first_5_bits, other_12_bits)
+        case 0110111: lui(20_bits)
+        case 0010111: auipc(20_bits)
+        case _: error
+    }
+}
+
+funct3(Opcode, 20_bits, SB_imm) {
+    rs1(Opcode, first_3_bits, other_17_bits, SB_imm)
+}
+
+rs1(Opcode, funct3, 17_bits, SB_imm) {
+    Switch Opcode {
+        case 0110011 | 0100011 | 1100011: rs2(Opcode, funct3, first_5_bits, other_12_bits, SB_imm)
         case 0010011 | 0000011 | 1100111 | 1110011: handle_imm(Opcode, funct3, first_5_bits, other_12_bits)
         case _: error
     }
@@ -79,7 +119,15 @@ imm_load(funct3, rs1, 12_bits) {
     }
 }
 
-rs2(Opcode, funct3, rs1, 12_bits) {
+imm_e(funct3, rs1, imm) {
+    Switch imm {
+        case 000000000000: ecall(funct3, rs1, imm)
+        case 000000000001: ebreak(funct3, rs1, imm)
+        case _: error
+    }
+}
+
+rs2(Opcode, funct3, rs1, 12_bits, SB_imm) {
     Switch Opcode {
         case 0110011: Switch (funct3, last_7_bits) {
             case 000, 0000000: add(rs1, first_5_bits)
@@ -94,6 +142,20 @@ rs2(Opcode, funct3, rs1, 12_bits) {
             case 011, 0000000: sltu(rs1, first_5_bits)
             case _, _: error
         }
-        case 0100011: ...
+        case 0100011: Switch funct3 {
+            case 000: sb(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 001: sh(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 010: sw(rs1, first_5_bits, SB_imm, last_7_bits)
+            case _: error
+        }
+        case 1100011: Switch funct3 {
+            case 000: beq(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 001: bne(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 100: blt(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 101: bge(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 110: bltu(rs1, first_5_bits, SB_imm, last_7_bits)
+            case 111: bgeu(rs1, first_5_bits, SB_imm, last_7_bits)
+            case _: error
+        }
     }
 }
