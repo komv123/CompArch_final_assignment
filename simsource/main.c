@@ -2,6 +2,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+/*
+RV32I Simulator
+
+To use on a linux machine, run:
+
+./main
+
+
+To compile:
+
+gcc simsource/main.c -o main
+
+
+
+
+*/
+
 uint32_t x[32]; // Registers
 uint32_t PC; // TODO: Implementing PC
 
@@ -11,15 +28,53 @@ void dump_registers(){
     }
 }
 
-
-/* Instruction formats */
+/* -------------------- Instruction formats -------------------- */
 void r_type_executioner(uint32_t instr){
     uint8_t func3, func7;
     uint8_t rd, rs1, rs2;
     uint8_t opcode;
 
-    opcode = instr & 0x0000007F;
+    opcode  = instr & 0x0000007F;
+    rd      = (instr >> 7) & 0x0000001F;
+    func3   = (instr >> 12) & 0x00000007;
+    rs1     = (instr >> 15) & 0x0000001F;
+    rs2     = (instr >> 20) & 0x0000001F;
+    func7   = (instr >> 25) & 0x0000007F;
+
+    printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, rs2: %d, func7: 0x%x", 
+        instr, opcode, rd, func3, rs1, rs2, func7);
+    
+    switch (opcode)
+    {
+    case 0x33: // Bitwise functions
+        switch (func3)
+        {
+        case 0x0:
+            if (func7 == 0x00) {x[rd] = x[rs1] + x[rs2];}
+            else if (func7 == 0x20) {x[rd] = x[rs1] - x[rs2];} 
+            else {
+                printf("\nError in R-type. Exiting... \n\n");
+                dump_registers();
+                exit(EXIT_FAILURE);
+            }
+            break;
+        
+        default:
+            break;
+        }
+        break;
+    case 0x2F:
+    
+        break;
+
+    default:
+        printf("\nError in R-type. Exiting... \n\n");
+        dump_registers();
+        exit(EXIT_FAILURE);
+        break;
+    }
 }
+
 void i_type_executioner(uint32_t instr){
     uint8_t func3;
     int32_t imm;
@@ -36,7 +91,7 @@ void i_type_executioner(uint32_t instr){
     /* imm conversion from 12 bit to 32 bit */
     if (imm & 0x800) {imm = 0xFFFFF000 | imm;}
 
-    printf("Instr: %x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, imm: %x", 
+    printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, imm: %x", 
         instr, opcode, rd, func3, rs1, imm);
 
     /* Execution */
@@ -50,7 +105,7 @@ void i_type_executioner(uint32_t instr){
             break;
         
         default:
-            printf("\nError in i-type. Exiting... \n\n");
+            printf("\nError in I-type func3. Exiting... \n\n");
             dump_registers();
             exit(EXIT_FAILURE);
             break;
@@ -72,12 +127,13 @@ void i_type_executioner(uint32_t instr){
         break;
 
     default:
-        printf("\nError in i-type. Exiting... \n\n");
+        printf("\nError in I-type. Exiting... \n\n");
         dump_registers();
         exit(EXIT_FAILURE);
         break;
     }
 }
+
 void s_type_executioner(uint32_t instr){
     uint8_t func3;
     uint8_t imm_upper, imm_lower;
@@ -86,6 +142,7 @@ void s_type_executioner(uint32_t instr){
 
     opcode = instr & 0x0000007F;
 }
+
 void b_type_executioner(uint32_t instr){
     uint8_t func3;
     uint8_t imm_upper, imm_lower;
@@ -105,7 +162,7 @@ void u_type_executioner(uint32_t instr){
     rd = (instr >> 7) & 0x0000001F;
     imm = (instr >> 12) & 0x000FFFFF;
 
-    printf("Instr: %x, Opcode: %x, rd: %d, imm: %x", instr, opcode, rd, imm);
+    printf("Instr: %08x, Opcode: %x, rd: %d, imm: %x", instr, opcode, rd, imm);
 
     /* Execution */
     switch (opcode)
@@ -125,13 +182,14 @@ void u_type_executioner(uint32_t instr){
         break;
     }
 }
+
 void j_type_executioner(uint32_t instr){
     uint32_t imm;
     uint8_t rd;
     uint8_t opcode;
 }
 
-/* Disassembler */
+/* -------------------- Disassembler -------------------- */
 void instruction_disassembler(uint32_t instr){
     uint8_t opcode = instr & 0x0000007F;
     printf("%x | ", opcode);
