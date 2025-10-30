@@ -46,6 +46,7 @@ void b_type_executioner(uint32_t instr){
 
     opcode = instr & 0x0000007F;
 }
+
 void u_type_executioner(uint32_t instr){
     uint32_t imm;
     uint8_t rd;
@@ -70,14 +71,11 @@ void u_type_executioner(uint32_t instr){
         break;
 
     default:
+        printf("Error in U-type. Exiting... \n\n");
+        dump_registers();
+        exit(EXIT_FAILURE);
         break;
     }
-
-
-
-
-
-
 }
 void j_type_executioner(uint32_t instr){
     uint32_t imm;
