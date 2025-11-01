@@ -33,6 +33,7 @@ void r_type_executioner(uint32_t instr){
     uint8_t func3, func7;
     uint8_t rd, rs1, rs2;
     uint8_t opcode;
+    uint8_t shamt;
 
     opcode  = instr & 0x0000007F;
     rd      = (instr >> 7) & 0x0000001F;
@@ -50,21 +51,51 @@ void r_type_executioner(uint32_t instr){
         switch (func3)
         {
         case 0x0:
-            if (func7 == 0x00) {x[rd] = x[rs1] + x[rs2];}
-            else if (func7 == 0x20) {x[rd] = x[rs1] - x[rs2];} 
+            if (func7 == 0x00) {x[rd] = x[rs1] + x[rs2];} //add
+            else if (func7 == 0x20) {x[rd] = x[rs1] - x[rs2];} //sub
             else {
                 printf("\nError in R-type. Exiting... \n\n");
                 dump_registers();
                 exit(EXIT_FAILURE);
             }
+            break;    
+        case 0x4:
+            x[rd] = x[rs1] ^ x[rs2]; //xor
             break;
-        
+        case 0x6:
+            x[rd] = x[rs1] | x[rs2]; //or
+            break;
+        case 0x7:
+            x[rd] = x[rs1] & x[rs2]; //and
+            break;
+        case 0x1:
+            shamt = x[rs2] & 0x1F;
+            x[rd] = x[rs1] << shamt; //sll
+            break;
+        case 0x5:
+            shamt = x[rs2] & 0x1F; //make sure that max shift is 31
+            if(func7 == 0x00) {
+                x[rd] = x[rs1] >> shamt; //srl
+            } else if (func7 == 0x20) {
+                x[rd] = (int32_t)x[rs1] >> shamt; //sra
+            } else {
+                printf("\nError in R-type. Exiting... \n\n");
+                dump_registers();
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 0x2: 
+            x[rd] = ((int32_t)x[rs1] < (int32_t)x[rs2]) ? 1 : 0; //slt
+            break;
+        case 0x3:
+            x[rd] = (x[rs1] < x[rs2]) ? 1 : 0; //sltu
+            break;
         default:
             break;
         }
         break;
     case 0x2F:
-    
+
         break;
 
     default:
@@ -80,6 +111,7 @@ void i_type_executioner(uint32_t instr){
     int32_t imm;
     uint8_t rd, rs1;
     uint8_t opcode;
+    uint8_t shamt;
 
     /* Disassembly */
     opcode  = instr & 0x0000007F;
@@ -103,7 +135,33 @@ void i_type_executioner(uint32_t instr){
         case 0x0: // ADD Immediate
             x[rd] = x[rs1] + imm;
             break;
-        
+        case 0x4: //xori
+            x[rd] = x[rs1] ^ imm;
+            break;
+        case 0x6: //ori
+            x[rd] = x[rs1] | imm;
+            break;
+        case 0x7: //andi
+            x[rd] = x[rs1] & imm;
+            break;
+        case 0x1: //slli
+            shamt = imm & 0x1F;
+            x[rd] = x[rs1] << shamt;
+            break;
+        case 0x5: 
+            shamt = imm & 0x1F;
+            if(imm & 0x400) {  //1 << 10 (binary 0100 0000 0000)
+                x[rd] = (int32_t)x[rs1] >> shamt; //srai
+            } else {
+                x[rd] = x[rs1] >> shamt; //srli
+            }
+            break;
+        case 0x2: //slti
+            x[rd] = ((int32_t)x[rs1] < imm) ? 1 : 0;
+            break;
+        case 0x3: //sltiu
+            x[rd] = (x[rs1] < (uint32_t)imm) ? 1 : 0;
+            break;
         default:
             printf("\nError in I-type func3. Exiting... \n\n");
             dump_registers();
@@ -241,7 +299,7 @@ void instruction_disassembler(uint32_t instr){
 int main(){
     /* Importing the binary */
     FILE *bin_file;
-    bin_file = fopen("./tests/task1/addlarge.bin", "rb");
+    bin_file = fopen("./tests/task1/bool.bin", "rb");
     if (bin_file == NULL) {
             printf("Error opening file\n");
             exit(EXIT_FAILURE);
