@@ -7,7 +7,7 @@ RV32I Simulator
 
 To use on a linux machine, run:
 
-./main
+./main tests/task1/<test_file>.bin
 
 
 To compile:
@@ -296,10 +296,18 @@ void instruction_disassembler(uint32_t instr){
     }
 }
 
-int main(){
+int main(int argc, char* argv[]){
+
+    /* Parse the command line arguments. */
+    if (argc != 2) {
+        printf("Usage:   %s <path to binary>\n", argv[0]);
+        printf("Example: %s tests/task1/bool.bin\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     /* Importing the binary */
     FILE *bin_file;
-    bin_file = fopen("./tests/task1/bool.bin", "rb");
+    bin_file = fopen(argv[1], "rb");
     if (bin_file == NULL) {
             printf("Error opening file\n");
             exit(EXIT_FAILURE);
