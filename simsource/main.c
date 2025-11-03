@@ -203,11 +203,56 @@ void s_type_executioner(uint32_t instr){
 
 void b_type_executioner(uint32_t instr){
     uint8_t func3;
-    uint8_t imm_upper, imm_lower;
+    uint8_t imm11, imm4_1, imm10_5, imm12, imm;
     uint8_t rs1, rs2;
     uint8_t opcode;
 
-    opcode = instr & 0x0000007F;
+    opcode      = instr & 0x0000007F;
+    imm11       = (instr >> 7) & 0x00000001;
+    imm4_1      = (instr >> 8) & 0x0000000F;
+    func3       = (instr >> 12) & 0x00000007;
+    rs1         = (instr >> 15) & 0x0000001F;
+    rs2         = (instr >> 20) & 0x0000001F;
+    imm10_5     = (instr >> 25) & 0x0000003F;
+    imm12       = (instr >> 31) & 0x00000001;
+
+    switch (func3) {
+        case 0x0:
+            if(rs1 == rs2) {
+                PC += imm;
+            }
+            break;
+        case 0x1:
+            if(rs1 != rs2) {
+                PC += imm;
+            }
+            break;
+        case 0x4:
+            if(rs1 < rs2) {
+                PC += imm;
+            }
+            break;
+        case 0x5:
+            if(rs1 >= rs2) {
+                PC += imm;
+            }
+            break;
+        case 0x6:
+            if(rs1 < rs2) {
+                PC += (uint32_t)imm;
+            }
+            break;
+        case 0x7:
+            if(rs1 >= rs2) {
+                PC += (uint32_t)imm;
+            }
+            break;
+        default: 
+            printf("\nError in I-type func3. Exiting... \n\n");
+            dump_registers();
+            exit(EXIT_FAILURE);
+            break;
+    }
 }
 
 void u_type_executioner(uint32_t instr){
@@ -317,9 +362,9 @@ int main(int argc, char* argv[]){
 
     /* Reading the binary */
     uint32_t instr = 0;
-    for (size_t i = 0; i < bytes_read; i++) {
-        instr = (instr >> 8) + (bin[i] << 24);  // Rearranging the bytes from LSB to MSB
-        if ((i + 1) % 4 == 0) {
+    for (PC = 0; PC < bytes_read; PC++) {
+        instr = (instr >> 8) + (bin[PC] << 24);  // Rearranging the bytes from LSB to MSB
+        if ((PC + 1) % 4 == 0) {
             printf("\n%08x ", instr); 
             // Execute instruction
             instruction_disassembler(instr);
