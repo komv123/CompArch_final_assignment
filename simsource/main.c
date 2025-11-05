@@ -274,14 +274,14 @@ void b_type_executioner(uint32_t instr)
         }
         break;
     case 0x4:
-        if (x[rs1] < x[rs2])
+        if ((int32_t)x[rs1] < (int32_t)x[rs2])
         {
             PC += imm;
             PC -= 4; // Adjust for the automatic PC increment after instruction fetch
         }
         break;
     case 0x5:
-        if (x[rs1] >= x[rs2])
+        if ((int32_t)x[rs1] >= (int32_t)x[rs2])
         {
             PC += imm;
             PC -= 4; // Adjust for the automatic PC increment after instruction fetch
