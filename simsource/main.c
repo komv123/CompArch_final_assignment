@@ -20,7 +20,8 @@ gcc simsource/main.c -o main
 */
 
 uint32_t x[32]; // Registers
-uint32_t PC;    // TODO: Implementing PC
+uint32_t PC;
+uint8_t memory[1048576];
 
 void dump_registers()
 {
@@ -192,7 +193,28 @@ void i_type_executioner(uint32_t instr)
         }
         break;
     case 0x03:
-
+        switch (func3) {
+            case 0x0:
+                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFF;
+                break;
+            case 0x1:
+                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFFFF;
+                break;
+            case 0x2:
+                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm];
+                break;
+            case 0x4:
+                x[rd] = memory[x[rs1] + imm] & 0xFF;
+                break;
+            case 0x5:
+                x[rd] = memory[x[rs1] + imm] & 0xFFFF;
+                break;
+            default:
+                printf("\nError in I-type func3. Exiting... \n\n");
+                dump_registers();
+                exit(EXIT_FAILURE);
+                break;
+        }
         break;
 
     case 0x73: // Enviroment operations
@@ -209,6 +231,11 @@ void i_type_executioner(uint32_t instr)
 
         break;
 
+    case 0x67:
+        x[rd] = PC+4;
+        PC += imm;
+        break;
+    
     default:
         printf("\nError in I-type. Exiting... \n\n");
         dump_registers();
@@ -221,10 +248,33 @@ void s_type_executioner(uint32_t instr)
 {
     uint8_t func3;
     uint8_t imm_upper, imm_lower;
+    uint8_t imm;
     uint8_t rs1, rs2;
     uint8_t opcode;
 
     opcode = instr & 0x0000007F;
+    imm_upper = (instr >> 25) & 0x3F;
+    imm_lower = (instr >> 7) & 0x1F;
+    imm = (imm_upper << 5) | imm_lower;
+    rs1 = (instr >> 15) & 0x1F;
+    rs2 = (instr >> 20) & 0x1F;
+
+    switch (func3) {
+        case 0x0:
+            memory[x[rs1] + imm] = x[rs2] & 0xFF;
+            break;
+        case 0x1:
+            memory[x[rs1] + imm] = x[rs2] & 0xFFFF;
+            break;
+        case 0x2:
+            memory[x[rs1] + imm] = x[rs2];
+            break;
+        default:
+            printf("\nError in S-type func3. Exiting... \n\n");
+            dump_registers();
+            exit(EXIT_FAILURE);
+            break;
+    }
 }
 
 void b_type_executioner(uint32_t instr)
@@ -302,7 +352,7 @@ void b_type_executioner(uint32_t instr)
         }
         break;
     default:
-        printf("\nError in I-type func3. Exiting... \n\n");
+        printf("\nError in B-type func3. Exiting... \n\n");
         dump_registers();
         exit(EXIT_FAILURE);
         break;
