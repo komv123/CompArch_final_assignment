@@ -195,13 +195,13 @@ void i_type_executioner(uint32_t instr)
     case 0x03:
         switch (func3) {
             case 0x0:
-                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFF;
+                x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFF;
                 break;
             case 0x1:
-                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFFFF;
+                x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFFFF;
                 break;
             case 0x2:
-                (int32_t)x[rd] = memory[(int32_t)x[rs1] + imm];
+                x[rd] = memory[(int32_t)x[rs1] + imm];
                 break;
             case 0x4:
                 x[rd] = memory[x[rs1] + imm] & 0xFF;
@@ -396,6 +396,18 @@ void j_type_executioner(uint32_t instr)
     uint32_t imm;
     uint8_t rd;
     uint8_t opcode;
+    uint8_t imm20, imm10_1, imm11, imm19_12;
+
+    imm20 = (instr >> 31) & 0x1;
+    imm11 = (instr >> 20) & 0x1;
+    imm10_1 = (instr >> 21) & 0x3FF;
+    imm19_12 = (instr >> 12) & 0xFF;
+    imm = (imm20 << 20) | 
+          (imm19_12 << 12) |
+          (imm11 << 11) |
+          (imm10_1 << 1);
+    x[rd] = PC+4;
+    PC += imm;
 }
 
 /* -------------------- Disassembler -------------------- */
