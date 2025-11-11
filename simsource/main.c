@@ -193,27 +193,28 @@ void i_type_executioner(uint32_t instr)
         }
         break;
     case 0x03:
-        switch (func3) {
-            case 0x0:
-                x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFF;
-                break;
-            case 0x1:
-                x[rd] = memory[(int32_t)x[rs1] + imm] & 0xFFFF;
-                break;
-            case 0x2:
-                x[rd] = memory[(int32_t)x[rs1] + imm];
-                break;
-            case 0x4:
-                x[rd] = memory[x[rs1] + imm] & 0xFF;
-                break;
-            case 0x5:
-                x[rd] = memory[x[rs1] + imm] & 0xFFFF;
-                break;
-            default:
-                printf("\nError in I-type func3. Exiting... \n\n");
-                dump_registers();
-                exit(EXIT_FAILURE);
-                break;
+        switch (func3)
+        {
+        case 0x0:
+            x[rd] = (int8_t)memory[(int32_t)x[rs1] + imm];
+            break;
+        case 0x1:
+            x[rd] = (int16_t)(memory[(int32_t)x[rs1] + imm] | (memory[(int32_t)x[rs1] + imm + 1] << 8));
+            break;
+        case 0x2:
+            x[rd] = memory[(int32_t)x[rs1] + imm] | (memory[(int32_t)x[rs1] + imm + 1] << 8) | (memory[(int32_t)x[rs1] + imm + 2] << 16) | (memory[(int32_t)x[rs1] + imm + 3] << 24);
+            break;
+        case 0x4:
+            x[rd] = memory[x[rs1] + imm];
+            break;
+        case 0x5:
+            x[rd] = memory[x[rs1] + imm] | (memory[x[rs1] + imm + 1] << 8);
+            break;
+        default:
+            printf("\nError in I-type func3. Exiting... \n\n");
+            dump_registers();
+            exit(EXIT_FAILURE);
+            break;
         }
         break;
 
@@ -232,10 +233,11 @@ void i_type_executioner(uint32_t instr)
         break;
 
     case 0x67:
-        x[rd] = PC+4;
-        PC += imm;
+        x[rd] = PC + 4;
+        PC = x[rs1] + imm;
+        PC -= 4; // Adjust for the automatic PC increment after instruction fetch
         break;
-    
+
     default:
         printf("\nError in I-type. Exiting... \n\n");
         dump_registers();
@@ -248,32 +250,38 @@ void s_type_executioner(uint32_t instr)
 {
     uint8_t func3;
     uint8_t imm_upper, imm_lower;
-    uint8_t imm;
+    int32_t imm;
     uint8_t rs1, rs2;
     uint8_t opcode;
 
+    func3 = (instr >> 12) & 0x00000007;
     opcode = instr & 0x0000007F;
-    imm_upper = (instr >> 25) & 0x3F;
+    imm_upper = (instr >> 25) & 0x7F;
     imm_lower = (instr >> 7) & 0x1F;
     imm = (imm_upper << 5) | imm_lower;
     rs1 = (instr >> 15) & 0x1F;
     rs2 = (instr >> 20) & 0x1F;
 
-    switch (func3) {
-        case 0x0:
-            memory[x[rs1] + imm] = x[rs2] & 0xFF;
-            break;
-        case 0x1:
-            memory[x[rs1] + imm] = x[rs2] & 0xFFFF;
-            break;
-        case 0x2:
-            memory[x[rs1] + imm] = x[rs2];
-            break;
-        default:
-            printf("\nError in S-type func3. Exiting... \n\n");
-            dump_registers();
-            exit(EXIT_FAILURE);
-            break;
+    switch (func3)
+    {
+    case 0x0:
+        memory[x[rs1] + imm] = x[rs2] & 0xFF;
+        break;
+    case 0x1:
+        memory[x[rs1] + imm] = x[rs2] & 0xFFFF;
+        memory[x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
+        break;
+    case 0x2:
+        memory[x[rs1] + imm] = x[rs2];
+        memory[x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
+        memory[x[rs1] + imm + 2] = (x[rs2] >> 16) & 0xFF;
+        memory[x[rs1] + imm + 3] = (x[rs2] >> 24) & 0xFF;
+        break;
+    default:
+        printf("\nError in S-type func3. Exiting... \n\n");
+        dump_registers();
+        exit(EXIT_FAILURE);
+        break;
     }
 }
 
@@ -398,6 +406,9 @@ void j_type_executioner(uint32_t instr)
     uint8_t opcode;
     uint8_t imm20, imm10_1, imm11, imm19_12;
 
+    opcode = instr & 0x7F;
+    rd = (instr >> 7) & 0x1F;
+
     imm20 = (instr >> 31) & 0x1;
     imm11 = (instr >> 20) & 0x1;
     imm10_1 = (instr >> 21) & 0x3FF;
@@ -408,6 +419,7 @@ void j_type_executioner(uint32_t instr)
           (imm10_1 << 1);
     x[rd] = PC+4;
     PC += imm;
+    PC -= 4; // Adjust for the automatic PC increment after instruction fetch
 }
 
 /* -------------------- Disassembler -------------------- */
@@ -482,11 +494,16 @@ int main(int argc, char *argv[])
     uint8_t bin[65536];
     size_t bytes_read = fread(bin, 1, 65536, bin_file);
 
+    for (size_t i = 0; i < bytes_read; i++)
+    {
+        memory[i] = bin[i];
+    }
+
     /* Reading the binary */
     uint32_t instr = 0;
     for (PC = 0; PC < bytes_read; PC++)
     {
-        instr = (instr >> 8) + (bin[PC] << 24); // Rearranging the bytes from LSB to MSB
+        instr = (instr >> 8) + (memory[PC] << 24); // Rearranging the bytes from LSB to MSB
         if ((PC + 1) % 4 == 0)
         {
             printf("\n%08x ", instr);
