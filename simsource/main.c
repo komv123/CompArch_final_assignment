@@ -528,6 +528,7 @@ int main(int argc, char *argv[])
             // Execute instruction
             instruction_disassembler(instr);
         }
+        x[0] = 0;
         printf("PC: %x", PC);
     }
     printf("\n");
