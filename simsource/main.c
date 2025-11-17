@@ -38,12 +38,10 @@ void dump_registers()
     } else {
         res_file = source_file;  // No '/' found, entire string is the res_file
     }
-
     char *dot = strrchr(res_file, '.');
     if (dot != NULL) {
         *dot = '\0';
     }
-
     char res_path[512];
     snprintf(res_path, sizeof(res_path), "results/%s.res", res_file);
     
@@ -58,6 +56,10 @@ void dump_registers()
 
     /* Writing registers in LSB form */
     uint8_t data[128]; 
+    for (int i = 0; i < 128; i++)
+    {
+        data[i] = 0;
+    }
     
     for (short reg = 0; reg < 32; reg ++){
         for (short i = 0; i < 4; i++){
@@ -518,7 +520,8 @@ int main(int argc, char *argv[])
     }
 
     /* Load binary into memory */
-    FILE *bin_file = fopen(argv[1], "rb");
+    source_file = argv[1];
+    FILE *bin_file = fopen(source_file, "rb");
     if (bin_file == NULL)
     {
         printf("Error opening file\n");
