@@ -21,7 +21,7 @@ gcc simsource/main.c -o main
 
 uint32_t x[32]; // Registers
 uint32_t PC;
-uint8_t memory[1048576];
+uint8_t memory[1048576];    // 1MB memory for .text
 
 void dump_registers()
 {
@@ -267,20 +267,29 @@ void s_type_executioner(uint32_t instr)
         imm = 0xFFFFF000 | imm;
     }
 
+    printf("Instr: %08x, Opcode: %x, imm: %d, func3: 0x%x, rs1: %d, rs2: %d",
+           instr, opcode, imm, func3, rs1, rs2);
+
     switch (func3)
     {
     case 0x0:
         memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
+        printf(" Saved byte in memory: 0x%x", memory[x[rs1] + imm]);
         break;
     case 0x1:
         memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
         memory[(int32_t)x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
+        printf(" Saved half in memory: 0x%x", ((memory[x[rs1] + imm + 1]<< 8 ) | (memory[x[rs1] + imm])));
         break;
     case 0x2:
         memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
         memory[(int32_t)x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
         memory[(int32_t)x[rs1] + imm + 2] = (x[rs2] >> 16) & 0xFF;
         memory[(int32_t)x[rs1] + imm + 3] = (x[rs2] >> 24) & 0xFF;
+        printf(" Saved word in memory: 0x%x", ((memory[x[rs1] + imm] << 24) |
+                                            (memory[x[rs1] + imm + 1] << 16) |
+                                            (memory[x[rs1] + imm + 2] << 8) |
+                                            (memory[x[rs1] + imm + 3])));
         break;
     default:
         printf("\nError in S-type func3. Exiting... \n\n");
@@ -517,19 +526,17 @@ int main(int argc, char *argv[])
     PC = 0;
     
     uint32_t instr = 0;
-    
-     /* Reading the binary */
-    for (PC = 0; PC < bytes_read; PC++)
+    for (PC = 0; PC < (sizeof(memory) / sizeof(memory[0])); PC++)
     {
-        instr = (instr >> 8) + (memory[PC] << 24); // Rearranging the bytes from LSB to MSB
+        instr = (instr >> 8) + ((uint32_t)memory[PC] << 24); // Rearranging the bytes from LSB to MSB
+        printf("\nPC: %x", PC);
         if ((PC + 1) % 4 == 0)
-        {
+        {   
             printf("\n%08x ", instr);
-            // Execute instruction
             instruction_disassembler(instr);
         }
         x[0] = 0;
-        printf("PC: %x", PC);
+        
     }
     printf("\n");
     dump_registers();
