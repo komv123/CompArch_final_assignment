@@ -21,7 +21,7 @@ gcc simsource/main.c -o main
 
 uint32_t x[32]; // Registers
 uint32_t PC;
-uint8_t memory[1048576];    // 1MB memory for .text
+uint8_t memory[1048576]; // 1MB memory for .text
 
 void dump_registers()
 {
@@ -279,7 +279,7 @@ void s_type_executioner(uint32_t instr)
     case 0x1:
         memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
         memory[(int32_t)x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
-        printf(" Saved half in memory: 0x%x", ((memory[x[rs1] + imm + 1]<< 8 ) | (memory[x[rs1] + imm])));
+        printf(" Saved half in memory: 0x%x", ((memory[x[rs1] + imm + 1] << 8) | (memory[x[rs1] + imm])));
         break;
     case 0x2:
         memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
@@ -287,9 +287,9 @@ void s_type_executioner(uint32_t instr)
         memory[(int32_t)x[rs1] + imm + 2] = (x[rs2] >> 16) & 0xFF;
         memory[(int32_t)x[rs1] + imm + 3] = (x[rs2] >> 24) & 0xFF;
         printf(" Saved word in memory: 0x%x", ((memory[x[rs1] + imm] << 24) |
-                                            (memory[x[rs1] + imm + 1] << 16) |
-                                            (memory[x[rs1] + imm + 2] << 8) |
-                                            (memory[x[rs1] + imm + 3])));
+                                               (memory[x[rs1] + imm + 1] << 16) |
+                                               (memory[x[rs1] + imm + 2] << 8) |
+                                               (memory[x[rs1] + imm + 3])));
         break;
     default:
         printf("\nError in S-type func3. Exiting... \n\n");
@@ -427,15 +427,16 @@ void j_type_executioner(uint32_t instr)
     imm11 = (instr >> 20) & 0x1;
     imm10_1 = (instr >> 21) & 0x3FF;
     imm19_12 = (instr >> 12) & 0xFF;
-    imm = (imm20 << 20) | 
+    imm = (imm20 << 20) |
           (imm19_12 << 12) |
           (imm11 << 11) |
           (imm10_1 << 1);
-    
-    if (imm & 0x100000) {
+
+    if (imm & 0x100000)
+    {
         imm = 0xFFE00000 | imm;
     }
-    
+
     x[rd] = PC + 4;
     PC += imm;
     PC -= 4; // Adjust for the automatic PC increment after instruction fetch
@@ -520,23 +521,21 @@ int main(int argc, char *argv[])
         memory[i] = bin[i];
     }
 
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 32; i++)
+    {
         x[i] = 0;
     }
     PC = 0;
-    
+
     uint32_t instr = 0;
-    for (PC = 0; PC < (sizeof(memory) / sizeof(memory[0])); PC++)
+    while (PC < bytes_read)
     {
-        instr = (instr >> 8) + ((uint32_t)memory[PC] << 24); // Rearranging the bytes from LSB to MSB
-        printf("\nPC: %x", PC);
-        if ((PC + 1) % 4 == 0)
-        {   
-            printf("\n%08x ", instr);
-            instruction_disassembler(instr);
-        }
-        x[0] = 0;
-        
+        instr = memory[PC] | (memory[PC + 1] << 8) |
+                (memory[PC + 2] << 16) | (memory[PC + 3] << 24);
+
+        instruction_disassembler(instr);
+
+        PC += 4; // Increment by instruction size
     }
     printf("\n");
     dump_registers();
