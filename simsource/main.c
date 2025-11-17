@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+
 
 /*
 RV32I Simulator
@@ -23,12 +25,51 @@ uint32_t x[32]; // Registers
 uint32_t PC;
 uint8_t memory[1048576]; // 1MB memory for .text
 
+char *source_file;
+
 void dump_registers()
 {
     for (short i = 0; i < 32; i++)
     {
         printf("x%d = 0x%08x\n", i, x[i]);
     }
+
+    /* Getting file name */
+    char *res_file = strrchr(source_file, '/');
+    if (res_file != NULL) {
+        res_file++;  // Move past the '/'
+    } else {
+        res_file = source_file;  // No '/' found, entire string is the res_file
+    }
+
+    char *dot = strrchr(res_file, '.');
+    if (dot != NULL) {
+        *dot = '\0';
+    }
+
+    char res_path[512];
+    snprintf(res_path, sizeof(res_path), "results/%s.res", res_file);
+    
+    printf("%s\n", res_path);
+
+    /* Creating the .res file */
+    FILE *results = fopen(res_path, "wb");
+    if (results == NULL) {
+        perror("Error opening file");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Writing registers in LSB form */
+    uint8_t data[128]; 
+    
+    for (short reg = 0; reg < 32; reg ++){
+        for (short i = 0; i < 4; i++){
+            data[reg * 4 + i] = (x[reg] >> i * 8) & 0xFF;
+        }
+    }
+
+    fwrite(data, 1, sizeof(data), results);
+    fclose(results);
 }
 
 /* -------------------- Instruction formats -------------------- */
@@ -504,6 +545,8 @@ int main(int argc, char *argv[])
         printf("Example: %s tests/task1/bool.bin\n", argv[0]);
         exit(EXIT_FAILURE);
     }
+
+    source_file = argv[1];
 
     /* Importing the binary */
     FILE *bin_file;
