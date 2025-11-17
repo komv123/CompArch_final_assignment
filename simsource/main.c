@@ -11,19 +11,16 @@ To use on a linux machine, run:
 
 ./main tests/task1/<test_file>.bin
 
-
 To compile:
 
 gcc simsource/main.c -o main
-
-
 
 
 */
 
 uint32_t x[32]; // Registers
 uint32_t PC;
-uint8_t memory[1048576]; // 1MB memory for .text
+uint8_t memory[1048576];
 
 char *source_file;
 
@@ -125,7 +122,7 @@ void r_type_executioner(uint32_t instr)
             x[rd] = x[rs1] << shamt; // sll
             break;
         case 0x5:
-            shamt = x[rs2] & 0x1F; // make sure that max shift is 31
+            shamt = x[rs2] & 0x1F;
             if (func7 == 0x00)
             {
                 x[rd] = x[rs1] >> shamt; // srl
@@ -152,9 +149,7 @@ void r_type_executioner(uint32_t instr)
         }
         break;
     case 0x2F:
-
         break;
-
     default:
         printf("\nError in R-type. Exiting... \n\n");
         dump_registers();
@@ -193,37 +188,37 @@ void i_type_executioner(uint32_t instr)
     case 0x13: // Immediate operations
         switch (func3)
         {
-        case 0x0: // ADD Immediate
+        case 0x0: // ADDI
             x[rd] = x[rs1] + imm;
             break;
-        case 0x4: // xori
+        case 0x4: // XORI
             x[rd] = x[rs1] ^ imm;
             break;
-        case 0x6: // ori
+        case 0x6: // ORI
             x[rd] = x[rs1] | imm;
             break;
-        case 0x7: // andi
+        case 0x7: // ANDI
             x[rd] = x[rs1] & imm;
             break;
-        case 0x1: // slli
+        case 0x1: // SLLI
             shamt = imm & 0x1F;
             x[rd] = x[rs1] << shamt;
             break;
         case 0x5:
             shamt = imm & 0x1F;
             if (imm & 0x400)
-            {                                     // 1 << 10 (binary 0100 0000 0000)
-                x[rd] = (int32_t)x[rs1] >> shamt; // srai
+            {
+                x[rd] = (int32_t)x[rs1] >> shamt; // SRAI
             }
             else
             {
-                x[rd] = x[rs1] >> shamt; // srli
+                x[rd] = x[rs1] >> shamt; // SRLI
             }
             break;
-        case 0x2: // slti
+        case 0x2: // SLTI
             x[rd] = ((int32_t)x[rs1] < imm) ? 1 : 0;
             break;
-        case 0x3: // sltiu
+        case 0x3: // SLTIU
             x[rd] = (x[rs1] < (uint32_t)imm) ? 1 : 0;
             break;
         default:
@@ -233,50 +228,58 @@ void i_type_executioner(uint32_t instr)
             break;
         }
         break;
-    case 0x03:
-        switch (func3)
+        
+    case 0x03: // LOAD
         {
-        case 0x0:
-            x[rd] = (int8_t)memory[(int32_t)x[rs1] + imm];
-            break;
-        case 0x1:
-            x[rd] = (int16_t)(memory[(int32_t)x[rs1] + imm] | (memory[(int32_t)x[rs1] + imm + 1] << 8));
-            break;
-        case 0x2:
-            x[rd] = memory[(int32_t)x[rs1] + imm] | (memory[(int32_t)x[rs1] + imm + 1] << 8) | (memory[(int32_t)x[rs1] + imm + 2] << 16) | (memory[(int32_t)x[rs1] + imm + 3] << 24);
-            break;
-        case 0x4:
-            x[rd] = memory[x[rs1] + imm];
-            break;
-        case 0x5:
-            x[rd] = memory[x[rs1] + imm] | (memory[x[rs1] + imm + 1] << 8);
-            break;
-        default:
-            printf("\nError in I-type func3. Exiting... \n\n");
-            dump_registers();
-            exit(EXIT_FAILURE);
-            break;
+            uint32_t addr = x[rs1] + imm;
+            switch (func3)
+            {
+            case 0x0: // LB
+                x[rd] = (int8_t)memory[addr];
+                break;
+            case 0x1: // LH
+                x[rd] = (int16_t)(memory[addr] | (memory[addr + 1] << 8));
+                break;
+            case 0x2: // LW
+                x[rd] = memory[addr] | (memory[addr + 1] << 8) | 
+                       (memory[addr + 2] << 16) | (memory[addr + 3] << 24);
+                break;
+            case 0x4: // LBU
+                x[rd] = memory[addr];
+                break;
+            case 0x5: // LHU
+                x[rd] = memory[addr] | (memory[addr + 1] << 8);
+                break;
+            default:
+                printf("\nError in LOAD func3. Exiting... \n\n");
+                dump_registers();
+                exit(EXIT_FAILURE);
+                break;
+            }
         }
         break;
 
-    case 0x73: // Enviroment operations
-        if (!imm)
-        { // ecall
+    case 0x73: // System
+        if (imm == 0)
+        { // ECALL
             printf("\nEnvironment call registered.\nDumping registers and exiting... \n\n");
             dump_registers();
             exit(EXIT_SUCCESS);
         }
         else
-        {
-            // TODO: ebreak
+        { // EBREAK
+            printf("\nBreakpoint. Exiting... \n\n");
+            dump_registers();
+            exit(EXIT_SUCCESS);
         }
-
         break;
 
-    case 0x67:
-        x[rd] = PC + 4;
-        PC = x[rs1] + imm;
-        PC -= 4; // Adjust for the automatic PC increment after instruction fetch
+    case 0x67: // JALR
+        {
+            uint32_t target = (x[rs1] + imm) & ~1;  
+            x[rd] = PC + 4;                        
+            PC = target - 4;                       
+        }
         break;
 
     default:
@@ -308,29 +311,22 @@ void s_type_executioner(uint32_t instr)
         imm = 0xFFFFF000 | imm;
     }
 
-    printf("Instr: %08x, Opcode: %x, imm: %d, func3: 0x%x, rs1: %d, rs2: %d",
-           instr, opcode, imm, func3, rs1, rs2);
-
+    uint32_t addr = x[rs1] + imm;
+    
     switch (func3)
     {
-    case 0x0:
-        memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
-        printf(" Saved byte in memory: 0x%x", memory[x[rs1] + imm]);
+    case 0x0: // SB
+        memory[addr] = x[rs2] & 0xFF;
         break;
-    case 0x1:
-        memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
-        memory[(int32_t)x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
-        printf(" Saved half in memory: 0x%x", ((memory[x[rs1] + imm + 1] << 8) | (memory[x[rs1] + imm])));
+    case 0x1: // SH
+        memory[addr] = x[rs2] & 0xFF;
+        memory[addr + 1] = (x[rs2] >> 8) & 0xFF;
         break;
-    case 0x2:
-        memory[(int32_t)x[rs1] + imm] = x[rs2] & 0xFF;
-        memory[(int32_t)x[rs1] + imm + 1] = (x[rs2] >> 8) & 0xFF;
-        memory[(int32_t)x[rs1] + imm + 2] = (x[rs2] >> 16) & 0xFF;
-        memory[(int32_t)x[rs1] + imm + 3] = (x[rs2] >> 24) & 0xFF;
-        printf(" Saved word in memory: 0x%x", ((memory[x[rs1] + imm] << 24) |
-                                               (memory[x[rs1] + imm + 1] << 16) |
-                                               (memory[x[rs1] + imm + 2] << 8) |
-                                               (memory[x[rs1] + imm + 3])));
+    case 0x2: // SW
+        memory[addr] = x[rs2] & 0xFF;
+        memory[addr + 1] = (x[rs2] >> 8) & 0xFF;
+        memory[addr + 2] = (x[rs2] >> 16) & 0xFF;
+        memory[addr + 3] = (x[rs2] >> 24) & 0xFF;
         break;
     default:
         printf("\nError in S-type func3. Exiting... \n\n");
@@ -357,68 +353,46 @@ void b_type_executioner(uint32_t instr)
     imm10_5 = (instr >> 25) & 0x0000003F;
     imm12 = (instr >> 31) & 0x00000001;
 
-    imm = (imm12 << 12) |
-          (imm11 << 11) |
-          (imm10_5 << 5) |
-          (imm4_1 << 1);
+    imm = (imm12 << 12) | (imm11 << 11) | (imm10_5 << 5) | (imm4_1 << 1);
 
     if (imm & 0x1000)
     {
         imm = 0xFFFFE000 | imm;
     }
 
-    printf("Instr: %08x, Opcode: %x, func3: 0x%x, rs1: %d, imm: %d, rs2: %d, imm10_5: %x, imm4_1: %x, imm11: %x, imm12: %x",
-           instr, opcode, func3, rs1, imm, rs2, imm10_5, imm4_1, imm11, imm12);
+    printf("Instr: %08x, Opcode: %x, func3: 0x%x, rs1: %d, imm: %d, rs2: %d",
+           instr, opcode, func3, rs1, imm, rs2);
 
+    int branch_taken = 0;
     switch (func3)
     {
-    case 0x0:
-        if (x[rs1] == x[rs2])
-        {
-            PC += imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x0: // BEQ
+        branch_taken = (x[rs1] == x[rs2]);
         break;
-    case 0x1:
-        if (x[rs1] != x[rs2])
-        {
-            PC += imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x1: // BNE
+        branch_taken = (x[rs1] != x[rs2]);
         break;
-    case 0x4:
-        if ((int32_t)x[rs1] < (int32_t)x[rs2])
-        {
-            PC += imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x4: // BLT
+        branch_taken = ((int32_t)x[rs1] < (int32_t)x[rs2]);
         break;
-    case 0x5:
-        if ((int32_t)x[rs1] >= (int32_t)x[rs2])
-        {
-            PC += imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x5: // BGE
+        branch_taken = ((int32_t)x[rs1] >= (int32_t)x[rs2]);
         break;
-    case 0x6:
-        if (x[rs1] < x[rs2])
-        {
-            PC += (uint32_t)imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x6: // BLTU
+        branch_taken = (x[rs1] < x[rs2]);
         break;
-    case 0x7:
-        if (x[rs1] >= x[rs2])
-        {
-            PC += (uint32_t)imm;
-            PC -= 4; // Adjust for the automatic PC increment after instruction fetch
-        }
+    case 0x7: // BGEU
+        branch_taken = (x[rs1] >= x[rs2]);
         break;
     default:
         printf("\nError in B-type func3. Exiting... \n\n");
         dump_registers();
         exit(EXIT_FAILURE);
         break;
+    }
+    
+    if (branch_taken) {
+        PC = PC + imm - 4;  // Branch target minus 4 (for main loop increment)
     }
 }
 
@@ -438,11 +412,11 @@ void u_type_executioner(uint32_t instr)
     /* Execution */
     switch (opcode)
     {
-    case 0x37: // Load upper Imm
+    case 0x37: // LUI
         x[rd] = (imm << 12);
         break;
 
-    case 0x17: // Add Upper Imm to PC
+    case 0x17: // AUIPC
         x[rd] = PC + (imm << 12);
         break;
 
@@ -459,28 +433,26 @@ void j_type_executioner(uint32_t instr)
     int32_t imm;
     uint8_t rd;
     uint8_t opcode;
-    uint8_t imm20, imm10_1, imm11, imm19_12;
+    uint32_t imm20, imm10_1, imm11, imm19_12;
 
     opcode = instr & 0x7F;
     rd = (instr >> 7) & 0x1F;
 
     imm20 = (instr >> 31) & 0x1;
+    imm19_12 = (instr >> 12) & 0xFF;
     imm11 = (instr >> 20) & 0x1;
     imm10_1 = (instr >> 21) & 0x3FF;
-    imm19_12 = (instr >> 12) & 0xFF;
-    imm = (imm20 << 20) |
-          (imm19_12 << 12) |
-          (imm11 << 11) |
-          (imm10_1 << 1);
-
-    if (imm & 0x100000)
-    {
-        imm = 0xFFE00000 | imm;
+    
+    imm = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1);
+    
+    // Sign extend from bit 20
+    if (imm & 0x100000) {
+        imm = (int32_t)0xFFE00000 | imm;
     }
-
-    x[rd] = PC + 4;
-    PC += imm;
-    PC -= 4; // Adjust for the automatic PC increment after instruction fetch
+    
+    // JAL instruction
+    x[rd] = PC + 4;      // Save return address (next instruction)
+    PC = PC + imm - 4;   // Jump to target minus 4 (for main loop increment)
 }
 
 /* -------------------- Disassembler -------------------- */
@@ -489,8 +461,8 @@ void instruction_disassembler(uint32_t instr)
     uint8_t opcode = instr & 0x0000007F;
     printf("%x | ", opcode);
 
-    /* Deciding which instruction format to use for disassembly */
-    switch (instr & 0x0000007F)
+    /* Deciding which instruction format to use */
+    switch (opcode)
     {
     /* R-types */
     case 0x33:
@@ -537,8 +509,7 @@ void instruction_disassembler(uint32_t instr)
 
 int main(int argc, char *argv[])
 {
-
-    /* Parse the command line arguments. */
+    /* Parse command line arguments */
     if (argc != 2)
     {
         printf("Usage:   %s <path to binary>\n", argv[0]);
@@ -546,43 +517,54 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    source_file = argv[1];
-
-    /* Importing the binary */
-    FILE *bin_file;
-    bin_file = fopen(argv[1], "rb");
+    /* Load binary into memory */
+    FILE *bin_file = fopen(argv[1], "rb");
     if (bin_file == NULL)
     {
         printf("Error opening file\n");
         exit(EXIT_FAILURE);
     }
+    
     uint8_t bin[65536];
     size_t bytes_read = fread(bin, 1, 65536, bin_file);
+    fclose(bin_file);
 
     for (size_t i = 0; i < bytes_read; i++)
     {
         memory[i] = bin[i];
     }
 
+    // Initialize all registers to 0
     for (int i = 0; i < 32; i++)
     {
         x[i] = 0;
     }
     PC = 0;
 
-    uint32_t instr = 0;
+    /* Execute instructions */
     while (PC < bytes_read)
     {
-        instr = memory[PC] | (memory[PC + 1] << 8) |
-                (memory[PC + 2] << 16) | (memory[PC + 3] << 24);
-
+        // Fetch instruction (little-endian, 4 bytes)
+        uint32_t instr = memory[PC] | 
+                        (memory[PC + 1] << 8) | 
+                        (memory[PC + 2] << 16) | 
+                        (memory[PC + 3] << 24);
+        
+        printf("\nPC: 0x%08x | ", PC);
+        
+        // Execute instruction
         instruction_disassembler(instr);
-
-        PC += 4; // Increment by instruction size
+        
+        // Move to next instruction (unless branch/jump modified PC)
+        PC += 4;
+        
+        // Register x0 is always 0
+        x[0] = 0;
     }
+    
     printf("\n");
     dump_registers();
 
-    fclose(bin_file);
+
     return 0;
 }
