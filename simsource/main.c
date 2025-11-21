@@ -18,6 +18,9 @@ gcc simsource/main.c -o main
 
 */
 
+#define DEBUG 0
+
+
 uint32_t x[32]; // Registers
 uint32_t PC;
 uint8_t memory[1048576];
@@ -25,10 +28,11 @@ uint8_t memory[1048576];
 char *source_file;
 
 void dump_registers()
-{
-    for (short i = 0; i < 32; i++)
-    {
-        printf("x%d = 0x%08x\n", i, x[i]);
+{   
+    if (DEBUG) {
+        for (short i = 0; i < 32; i++){
+            printf("x%d = 0x%08x\n", i, x[i]);
+        }
     }
 
     /* Getting file name */
@@ -44,8 +48,6 @@ void dump_registers()
     }
     char res_path[512];
     snprintf(res_path, sizeof(res_path), "results/%s.res", res_file);
-    
-    printf("%s\n", res_path);
 
     /* Creating the .res file */
     FILE *results = fopen(res_path, "wb");
@@ -86,8 +88,8 @@ void r_type_executioner(uint32_t instr)
     rs2 = (instr >> 20) & 0x0000001F;
     func7 = (instr >> 25) & 0x0000007F;
 
-    printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, rs2: %d, func7: 0x%x",
-           instr, opcode, rd, func3, rs1, rs2, func7);
+    if (DEBUG) {printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, rs2: %d, func7: 0x%x",
+           instr, opcode, rd, func3, rs1, rs2, func7);}
 
     switch (opcode)
     {
@@ -181,8 +183,8 @@ void i_type_executioner(uint32_t instr)
         imm = 0xFFFFF000 | imm;
     }
 
-    printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, imm: %x",
-           instr, opcode, rd, func3, rs1, imm);
+    if (DEBUG) {printf("Instr: %08x, Opcode: %x, rd: %d, func3: 0x%x, rs1: %d, imm: %x",
+           instr, opcode, rd, func3, rs1, imm);}
 
     /* Execution */
     switch (opcode)
@@ -264,13 +266,13 @@ void i_type_executioner(uint32_t instr)
     case 0x73: // System
         if (imm == 0)
         { // ECALL
-            printf("\nEnvironment call registered.\nDumping registers and exiting... \n\n");
+            if (DEBUG) {printf("\nEnvironment call registered.\nDumping registers and exiting... \n\n");}
             dump_registers();
             exit(EXIT_SUCCESS);
         }
         else
         { // EBREAK
-            printf("\nBreakpoint. Exiting... \n\n");
+            if (DEBUG) {printf("\nBreakpoint. Exiting... \n\n");}
             dump_registers();
             exit(EXIT_SUCCESS);
         }
@@ -362,8 +364,8 @@ void b_type_executioner(uint32_t instr)
         imm = 0xFFFFE000 | imm;
     }
 
-    printf("Instr: %08x, Opcode: %x, func3: 0x%x, rs1: %d, imm: %d, rs2: %d",
-           instr, opcode, func3, rs1, imm, rs2);
+    if (DEBUG) {printf("Instr: %08x, Opcode: %x, func3: 0x%x, rs1: %d, imm: %d, rs2: %d",
+           instr, opcode, func3, rs1, imm, rs2);}
 
     int branch_taken = 0;
     switch (func3)
@@ -409,7 +411,7 @@ void u_type_executioner(uint32_t instr)
     rd = (instr >> 7) & 0x0000001F;
     imm = (instr >> 12) & 0x000FFFFF;
 
-    printf("Instr: %08x, Opcode: %x, rd: %d, imm: %x", instr, opcode, rd, imm);
+    if (DEBUG) {printf("Instr: %08x, Opcode: %x, rd: %d, imm: %x", instr, opcode, rd, imm);}
 
     /* Execution */
     switch (opcode)
@@ -461,7 +463,7 @@ void j_type_executioner(uint32_t instr)
 void instruction_disassembler(uint32_t instr)
 {
     uint8_t opcode = instr & 0x0000007F;
-    printf("%x | ", opcode);
+    if (DEBUG) {printf("%x | ", opcode);}
 
     /* Deciding which instruction format to use */
     switch (opcode)
@@ -553,7 +555,7 @@ int main(int argc, char *argv[])
                         (memory[PC + 2] << 16) | 
                         (memory[PC + 3] << 24);
         
-        printf("\nPC: 0x%08x | ", PC);
+        if (DEBUG) {printf("\nPC: 0x%08x | ", PC);}
         
         // Execute instruction
         instruction_disassembler(instr);
@@ -565,7 +567,7 @@ int main(int argc, char *argv[])
         x[0] = 0;
     }
     
-    printf("\n");
+    if (DEBUG) {printf("\n");}
     dump_registers();
 
 
