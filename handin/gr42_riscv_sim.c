@@ -13,10 +13,10 @@ Lovro Antic - s235263
 Weihao Mo - s235284
 
 To compile run:
-gcc main.c -o main
+gcc gr42_riscv_sim.c -o gr42
 
 To use on a linux machine, run:
-./main <location_of_test_bin>/<test_file>.bin
+./gr42 <location_of_test_bin>/<test_file>.bin
 
 */
 

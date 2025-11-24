@@ -91,6 +91,24 @@ task4:
 	echo "Test 9: t9"
 	./$(name) ./tests/task4/t9.bin
 	./$(compare) tests/task4/t9.res results/t9.res
+	echo "Test 10: t10"
+	./$(name) ./tests/task4/t10.bin
+	./$(compare) tests/task4/t10.res results/t10.res
+	echo "Test 11: t11"
+	./$(name) ./tests/task4/t11.bin
+	./$(compare) tests/task4/t11.res results/t11.res
+	echo "Test 12: t12"
+	./$(name) ./tests/task4/t12.bin
+	./$(compare) tests/task4/t12.res results/t12.res
+	echo "Test 13: t13"
+	./$(name) ./tests/task4/t13.bin
+	./$(compare) tests/task4/t13.res results/t13.res
+	echo "Test 14: t14"
+	./$(name) ./tests/task4/t14.bin
+	./$(compare) tests/task4/t14.res results/t14.res
+	echo "Test 15: t15"
+	./$(name) ./tests/task4/t15.bin
+	./$(compare) tests/task4/t15.res results/t15.res
 
 test_all:
 	echo "Running all tests"
