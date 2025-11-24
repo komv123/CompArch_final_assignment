@@ -21,6 +21,7 @@ To use on a linux machine, run:
 */
 
 #define DEBUG 0
+#define REG_DUMP 0 // 0 to disable printing to terminal
 
 
 uint32_t x[32]; // Registers
@@ -31,8 +32,10 @@ char *source_file; //
 
 void dump_registers()
 {   
-    for (short i = 0; i < 32; i++){
-        printf("x%d = 0x%08x\n", i, x[i]);
+    if (REG_DUMP) {
+        for (short i = 0; i < 32; i++){
+            printf("x%d = 0x%08x\n", i, x[i]);
+        }
     }
 
     /* Getting file name from input binary */
