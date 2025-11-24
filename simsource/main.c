@@ -21,7 +21,7 @@ To use on a linux machine, run:
 */
 
 #define DEBUG 0
-#define REG_DUMP 0 // 0 to disable printing to terminal
+#define REG_DUMP 1 // 0 to disable printing to terminal
 
 
 uint32_t x[32]; // Registers
